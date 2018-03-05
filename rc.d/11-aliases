@@ -1,0 +1,15 @@
+# -*- sh -*-
+
+# Configure stuff as I like it.
+
+alias v='vim'
+alias g='grep -rn . -e'
+alias ng='grep -v'
+alias irc='ssh phillipsmyth@shell.codethink.co.uk'
+alias rmr='rm -r'
+alias md='mkdir'
+alias cdb='cd ~/projects/buildstream'
+alias bs='bst'
+alias git!='git status'
+alias gitca='git commit --amend'
+alias gcs='~/Documents/Gurps/gcs/gcs.sh'
