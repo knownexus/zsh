@@ -1,0 +1,6 @@
+To ~/.zshenv
+fpath=(~/.resources/zsh/complete $fpath)
+
+To ~/.zshrc
+source ~/.resources/zsh/rc
+ONLY

@@ -298,7 +298,7 @@ _find_git () {
     git_root=$(_find_git_root) || return 1
     _VCS="git"
     _VCS_ROOT="$git_root"
-    _VCS_BRANCH=$(_get_git_branch)
+     _VCS_BRANCH=$(_get_git_branch)
     _VCS_REVNO=$(_get_git_revcode)
     _vcs_git_status git status --porcelain
 }
@@ -387,7 +387,7 @@ else
 fi
 
 # Prompt as machine%                                           /path/on/right
-PS1="%(5V.${_SUDO_ALLOWED}.${_SUDO_RESET})%m${_SUDO_RESET}${_SHELLDEPTH}%(1V.${_VCS_PROMPT}.)%# "
+PS1="%(5V.${_SUDO_ALLOWED}.${_SUDO_RESET})%m${_SUDO_RESET}${_SHELLDEPTH}$ "
 RPS1="%(1V.${_VCS_RPROMPT}.%~)"
 
 if [ "x$debian_chroot" = "x" -a -e /etc/debian_chroot ]; then
