@@ -4,12 +4,7 @@
 
 alias bye='exit'
 alias cdh='cd ~'
-alias cdm='cd /c/Maxcontact'
 alias g='grep -rnI . -e'
-alias l='ls -CF'
-alias ll='ls -l'
-alias la='ls -a'
-alias lla='la -l'
 alias md='mkdir'
 alias ng='grep -v'
 alias r='reset'
