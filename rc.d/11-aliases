@@ -3,13 +3,25 @@
 # Configure stuff as I like it.
 
 alias bye='exit'
-alias cdh='cd ~'
 alias g='grep -rniI . -e'
 alias md='mkdir'
 alias ng='grep -v'
 alias r='reset'
 alias remspace='sed -i '"'"'s/[[:space:]]*$//'"'"' *'
 alias rmr='rm -r'
+
+# CD alaises
+alias cdh='cd ~'
+alias rp='cd ~/VoiceMan'
+alias rpv='cd ~/VoiceMan/Voice'
+alias rpw='cd ~/VoiceMan/Voiceman.Web'
+alias rpwa='cd ~/VoiceMan/Voiceman.Web/Voiceman.AngularUI'
+alias rp2='cd ~/VoiceMan2'
+alias rp2v='cd ~/VoiceMan2/Voice'
+alias rp2w='cd ~/VoiceMan2/Voiceman.Web'
+alias rp2wa='cd ~/VoiceMan2/Voiceman.Web/Voiceman.AngularUI'
+alias rpfp='cd ~/voiceman.FileProcessor'
+
 alias v='vim'
 alias vb='vim ~/.resources/zsh/rc.d'
 alias sb='source ~/.resources/zsh/rc'
