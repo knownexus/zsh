@@ -47,3 +47,7 @@ clever_logout_widget () {
 zle -N clever_logout_widget
 
 bindkey '^D' clever_logout_widget
+
+# Alias Functions
+
+function fr { grep -rl "$1" "$3" | xargs sed -i "s/$1/$2/g" }
