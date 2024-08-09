@@ -4,6 +4,7 @@
 
 alias bye='exit'
 alias g='grep -rniI . -e'
+alias g1='grep -rniI . --exclude-dir=obj --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=logs --exclude-dir=Migrations --exclude-dir=dist --exclude=\*.svg -e'
 alias md='mkdir'
 alias ng='grep -v'
 alias r='reset'
@@ -12,15 +13,10 @@ alias rmr='rm -r'
 
 # CD alaises
 alias cdh='cd ~'
-alias rp='cd ~/source/repos/voiceman'
-alias rpv='cd ~/source/repos/voiceman/Voice'
-alias rpw='cd ~/source/repos/voiceman/Voiceman.Web'
-alias rpwa='cd ~/source/repos/voiceman/Voiceman.Web/Voiceman.AngularUI'
-alias rp2='cd ~/source/repos/voiceman2'
-alias rp2v='cd ~/source/repos/voiceman2/Voice'
-alias rp2w='cd ~/source/repos/voiceman2/Voiceman.Web'
-alias rp2wa='cd ~/source/repos/voiceman2/Voiceman.Web/Voiceman.AngularUI'
-alias rpfp='cd ~/source/repos/voiceman.FileProcessor'
+alias rp='cd ~/repos'
+alias rpp='cd ~/repos/Evoke.Kiosk.PremierInn'
+alias rpc='cd ~/repos/core'
+alias rpe='cd ~/repos/core/Evoke.Core.Hardware/Evoke.Core.Encoder'
 
 alias v='vim'
 alias vb='vim ~/.resources/zsh/rc.d'
