@@ -1,26 +1,75 @@
 # -*- sh -*-
 
-# Configure stuff as I like it.
+# ------------------------------
+# Directory & file exclusions
+# ------------------------------
+EXCLUDE_DIRS="--exclude-dir=obj --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=logs --exclude-dir=Migrations --exclude-dir=dist --exclude-dir=dist_electron"
+EXCLUDE_DIRS2="$EXCLUDE_DIRS --exclude-dir=bin"
+EXCLUDE_FILES="--exclude=*.svg"
 
+# ------------------------------
+# Output settings
+# ------------------------------
+CHAR_LIMIT=500
+BLUE='\033[0;34m'
+NC='\033[0m'
+LINE_PREFIX="ln "
+
+# ------------------------------
+# Safe search function
+# ------------------------------
+search_grep() {
+  local pattern="$1"
+  local limit="${2:-500}"
+  local exclude_dirs="${3:-}"
+
+  if [[ -z "$pattern" ]]; then
+    echo "Usage: ${FUNCNAME[0]} <pattern>"
+    return 1
+  fi
+
+  grep -rniI $exclude_dirs --exclude=*.svg . -e "$pattern" 2>/dev/null | \
+      sed -E "s|^([^:]+):([0-9]+):(.*)$|\033[0;34m\1\033[0m\nln \2: \3\n|" | \
+      cut -c -"${limit}"
+}
+
+# ------------------------------
+# Search aliases
+# ------------------------------
+unalias g g1 g2 2>/dev/null
+
+g()  { search_grep "$1"; }
+g1() { search_grep "$1" "$EXCLUDE_DIRS"; }
+g2() { search_grep "$1" "$EXCLUDE_DIRS2"; }
+
+# ------------------------------
+# General aliases
+# ------------------------------
 alias bye='exit'
-alias g='grep -rniI . -e'
-alias g1='grep -rniI . --exclude-dir=obj --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=logs --exclude-dir=Migrations --exclude-dir=dist --exclude-dir=dist_electron --exclude=\*.svg -e'
 alias md='mkdir'
 alias ng='grep -v'
 alias r='reset'
-alias remspace='sed -i '"'"'s/[[:space:]]*$//'"'"' *'
+alias remspace='sed -i '\''s/[[:space:]]*$//'\'' *'
 alias rmr='rm -r'
 
-# CD alaises
+# ------------------------------
+# CD shortcuts
+# ------------------------------
 alias cdh='cd ~'
 alias rp='cd ~/repos'
-alias rppr='cd ~/repos/Evoke.Kiosk.PremierInn'
-alias rpcore='cd ~/repos/core'
-alias rpe='cd ~/repos/Evoke.Core.Encoder32'
-alias rppa='cd ~/repos/Parking'
-alias rpc='cd ~/repos/Evoke.Kiosk.Common.Service/Evoke.Kiosk.Common.Service'
+alias rps='cd ~/repos/ShatteredRealms'
+alias rpsource='cd ~/.resources/zsh'
 
+# ------------------------------
+# Vim shortcuts
+# ------------------------------
 alias v='vim'
 alias vb='vim ~/.resources/zsh/rc.d'
+
+# ------------------------------
+# Reload Zsh config
+# ------------------------------
 alias sb='source ~/.resources/zsh/rc'
 
+TREE_EXCLUDE='obj|.git|node_modules|logs|Migrations|dist|dist_electron|bin'
+alias tre='tree -I "$TREE_EXCLUDE" .'

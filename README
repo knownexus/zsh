@@ -1,6 +1,9 @@
-To ~/.zshenv
+~/.zshenv
 fpath=(~/.resources/zsh/complete $fpath)
 
-To ~/.zshrc
+~/.zshrc
 source ~/.resources/zsh/rc
-ONLY
+
+
+Clone Zsh_settings to .resources/settings
+Clone Zsh to /resources/zsh
