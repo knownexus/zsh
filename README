@@ -1,3 +1,5 @@
+Clone to .resources
+
 ~/.zshenv
 fpath=(~/.resources/zsh/complete $fpath)
 
@@ -5,5 +7,3 @@ fpath=(~/.resources/zsh/complete $fpath)
 source ~/.resources/zsh/rc
 
 
-Clone Zsh_settings to .resources/settings
-Clone Zsh to /resources/zsh
