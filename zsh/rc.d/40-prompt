@@ -305,7 +305,22 @@ _find_git () {
 
 _vcsify_path () {
     # Take the current path and VCSify it given the contents of the _VCS* variables
-    _VCS_PROMPT_ROOT=$(print -D $_VCS_ROOT)
+    # Replace REPO_ROOT prefix with REPO_SYMBOL if set (mirrors pwsh Get-ShortPath)
+    local raw_root
+    raw_root=$(print -D $_VCS_ROOT)
+    if [[ -n "$REPO_ROOT" && -n "$REPO_SYMBOL" ]]; then
+        local repo_root_display
+        repo_root_display=$(print -D "$REPO_ROOT")
+        if [[ "$raw_root" == "$repo_root_display" ]]; then
+            _VCS_PROMPT_ROOT="$REPO_SYMBOL"
+        elif [[ "$raw_root" == "${repo_root_display}/"* ]]; then
+            _VCS_PROMPT_ROOT="${REPO_SYMBOL}${raw_root#${repo_root_display}}"
+        else
+            _VCS_PROMPT_ROOT="$raw_root"
+        fi
+    else
+        _VCS_PROMPT_ROOT="$raw_root"
+    fi
     if [[ "x${_VCS_STATUS}" != "x" ]]; then
 	_VCS_STATUS=",${_VCS_STATUS}"
     fi

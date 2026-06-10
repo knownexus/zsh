@@ -40,6 +40,17 @@ maybe_add_path ~/dev-android-sdk/sdk-platform-bin
 maybe_add_path ~/dev-android-sdk/ndk-bin
 maybe_add_path ~/.local/bin
 
+# Rust (cargo)
+maybe_add_path ~/.cargo/bin
+
+# Go
+maybe_add_path ~/go/bin
+
+# Node version managers
+maybe_add_path ~/.volta/bin
+maybe_add_path ~/.fnm
+maybe_add_path ~/.nvm/versions/node/$(ls ~/.nvm/versions/node 2>/dev/null | tail -1)/bin
+
 test "x$LOCAL_LD_LIBRARY_PATH" != "x" && LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$LOCAL_LD_LIBRARY_PATH"
 test "x$LOCAL_PKG_CONFIG_PATH" && PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$LOCAL_PKG_CONFIG_PATH"
 test "x$LOCAL_MAN_PATH" && MANPATH="$MANPATH:$LOCAL_MAN_PATH"

@@ -1,60 +1,582 @@
-alias dontignoreme='git update-index --no-assume-unchanged'
-alias g!='git status'
+# -*- sh -*-
+# Git aliases — mirrors pwsh 12-git
+
+# ---------------------------------------------------------------------------
+# _help_print — render a man-page-style help string with ANSI colour
+# ---------------------------------------------------------------------------
+_help_print() {
+    local esc=$'\033'
+    local bold="${esc}[1m" yellow="${esc}[33m" cyan="${esc}[36m" reset="${esc}[0m"
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^(NAME|SYNOPSIS|DESCRIPTION|OPTIONS|EXAMPLES|SEE\ ALSO)$ ]]; then
+            echo "${bold}${yellow}${line}${reset}"
+        elif [[ "$line" =~ ^'    '-  ]]; then
+            echo "${bold}${cyan}${line}${reset}"
+        else
+            echo "$line"
+        fi
+    done
+}
+
+# ---------------------------------------------------------------------------
+# Status
+# ---------------------------------------------------------------------------
+gstat() {
+    local esc=$'\033'
+    local reset="${esc}[0m"  bold="${esc}[1m"
+    local green="${esc}[32m" red="${esc}[31m" yellow="${esc}[33m"
+    local cyan="${esc}[36m"  gray="${esc}[90m"
+    local up='↑' dn='↓'
+
+    local branch revno
+    branch=$(git symbolic-ref --short HEAD 2>/dev/null) || branch=$(git rev-parse --short HEAD 2>/dev/null)
+    revno=$(git rev-parse --short=7 HEAD 2>/dev/null)
+
+    local ahead behind ahead_str="" behind_str=""
+    ahead=$(git rev-list --count '@{upstream}..HEAD' 2>/dev/null || true)
+    behind=$(git rev-list --count 'HEAD..@{upstream}' 2>/dev/null || true)
+    [[ -n "$ahead"  && "$ahead"  -gt 0 ]] && ahead_str=" ${green}${up}${ahead}${reset}"
+    [[ -n "$behind" && "$behind" -gt 0 ]] && behind_str=" ${red}${dn}${behind}${reset}"
+
+    echo "${bold}branch:${reset} ${cyan}${branch}${reset} ${gray}${revno}${reset}${ahead_str}${behind_str}"
+    echo ""
+
+    local lines staged unstaged conflicts untracked
+    lines=$(git status --porcelain 2>/dev/null)
+    staged=$(echo "$lines"    | grep -E '^[AMDRC]'                 || true)
+    unstaged=$(echo "$lines"  | grep -E '^.[MD]'                   || true)
+    conflicts=$(echo "$lines" | grep -E '^(UU|AA|DD|AU|UA|DU|UD)' || true)
+    untracked=$(echo "$lines" | grep -E '^\?\?'                    || true)
+
+    if [[ -n "$staged" ]]; then
+        echo "${bold}${green}Staged:${reset}"
+        while IFS= read -r l; do
+            local label
+            case "${l:0:1}" in
+                A) label="new file" ;; M) label="modified" ;;
+                D) label="deleted " ;; R) label="renamed " ;;
+                C) label="copied  " ;; *) label="${l:0:1}"  ;;
+            esac
+            echo "  ${green}${label}:${reset} ${l:3}"
+        done <<< "$staged"
+        echo ""
+    fi
+
+    if [[ -n "$unstaged" ]]; then
+        echo "${bold}${red}Unstaged:${reset}"
+        while IFS= read -r l; do
+            local label
+            case "${l:1:1}" in
+                M) label="modified" ;; D) label="deleted " ;; *) label="${l:1:1}" ;;
+            esac
+            echo "  ${red}${label}:${reset} ${l:3}"
+        done <<< "$unstaged"
+        echo ""
+    fi
+
+    if [[ -n "$conflicts" ]]; then
+        echo "${bold}${yellow}Conflicts:${reset}"
+        while IFS= read -r l; do
+            echo "  ${yellow}conflict:${reset} ${l:3}"
+        done <<< "$conflicts"
+        echo ""
+    fi
+
+    if [[ -n "$untracked" ]]; then
+        echo "${bold}${gray}Untracked:${reset}"
+        while IFS= read -r l; do
+            echo "  ${gray}${l:3}${reset}"
+        done <<< "$untracked"
+        echo ""
+    fi
+
+    [[ -z "$lines" ]] && echo "${green}Nothing to commit, working tree clean${reset}"
+}
+alias g!='gstat'
+alias git!='gstat'
+
+# ---------------------------------------------------------------------------
+# Add
+# ---------------------------------------------------------------------------
 alias ga='git add'
+alias gita='git add'
+alias gau='git add -u'
+alias gitau='git add -u'
+
+# ---------------------------------------------------------------------------
+# Archive — create a zip of the current HEAD
+# ---------------------------------------------------------------------------
+gar() {
+    local repo_name="${1:-$(basename "$(git rev-parse --show-toplevel)")}"
+    repo_name="${repo_name// /_}"
+    local hash out
+    hash=$(git rev-parse --short HEAD)
+    out="${repo_name}-${hash}.zip"
+    git archive --format=zip HEAD -o "$out"
+    echo "Created $out ($(du -sh "$out" | cut -f1))"
+}
+
+# ---------------------------------------------------------------------------
+# Whitespace-clean staged apply
+# ---------------------------------------------------------------------------
 alias gaw='git diff -w | git apply --cached --ignore-whitespace'
-alias gaw1='f(){ git diff -w | git apply --cached --ignore-whitespace --include=$1;}; f'
+gaw1() { git diff -w | git apply --cached --ignore-whitespace "--include=$1"; }
+
+# ---------------------------------------------------------------------------
+# Blame / commit / diff / checkout
+# ---------------------------------------------------------------------------
 alias gbl='git blame'
+
 alias gc='git commit'
+alias gca='git commit --amend'
+alias gitca='git commit --amend'
+alias gitcm='git commit -m'
+alias uncommit='git reset --soft HEAD^'
+
 alias gdf='git diff'
 alias gdfs='git diff --staged'
 alias gdf1='git diff HEAD~1'
-alias git!='git status'
-alias gita='git add'
+
 alias gitb='git branch'
 alias gitc='git checkout'
-alias gitca='git commit --amend'
 alias gitcb='git checkout -b'
 alias gitcd='git checkout develop'
-alias gitcm='git commit -m'
-alias gitfp='git push --force'
-alias gitl='git log'
-alias gitlg="git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all"
-alias gitlg2='git log --graph --abbrev-commit --decorate --format=format:'\''%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n'\'''\''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)'\'' --all'
-alias gitpf='git push --force'
-alias gitra='git rebase --abort'
-alias gitrc='git rebase --continue'
-alias gitres='git checkout --'
-alias gits='git show'
-alias gitsn='git show --name-only'
-alias giturl='git config --get remote.origin.url'
-alias gl='git log'
-alias gp='git stash pop'
-alias gpf='git push --force'
-alias gp1='branch=$(git rev-parse --abbrev-ref HEAD); git push --set-upstream origin $branch'
 alias gres='git checkout --'
 alias gress='git restore --staged'
-alias grd='git rebase develop'
-alias gri='f(){ git rebase -i HEAD~$1; }; f'
-alias grim='f(){ git rebase -i --rebase-merges HEAD~$1; }; f'
-alias groot='git rebase -i --root master'
-alias gro='git rebase origin'
-alias groi='git rebase origin -i'
-alias grod='git rebase origin/develop'
-alias grpo='git remote prune origin'
-alias gru='git remote update'
-alias grm='git rebase master'
-alias gitrmc='git rm --cached'
+alias gitres='git checkout --'
+
+# ---------------------------------------------------------------------------
+# Log — rich format (mirrors pwsh gl / gl2)
+# ---------------------------------------------------------------------------
+_gl_log_header() {
+    local esc=$'\033'
+    local reset="${esc}[0m" gray="${esc}[90m" cyan="${esc}[36m"
+    local green="${esc}[32m" red="${esc}[31m"
+    local up='↑' dn='↓'
+
+    local status_lines branch upstream ab
+    status_lines=$(git status --porcelain=v2 --branch 2>/dev/null)
+    branch=$(echo "$status_lines"   | grep '^# branch.head '     | sed 's/^# branch.head //')
+    upstream=$(echo "$status_lines" | grep '^# branch.upstream ' | sed 's/^# branch.upstream //')
+    ab=$(echo "$status_lines"       | grep '^# branch.ab '       | sed 's/^# branch.ab //')
+
+    if [[ -n "$upstream" ]]; then
+        local origin_short ahead="" behind=""
+        origin_short=$(git rev-parse --short=7 '@{upstream}' 2>/dev/null)
+        ahead=$(echo "$ab"  | grep -oP '(?<=\+)\d+' || true)
+        behind=$(echo "$ab" | grep -oP '(?<=-)\d+' || true)
+        local ahead_str="" behind_str=""
+        [[ -n "$ahead"  && "$ahead"  -gt 0 ]] && ahead_str="  ${cyan}${up}${ahead} ahead${reset}"
+        [[ -n "$behind" && "$behind" -gt 0 ]] && behind_str="  ${red}${dn}${behind} behind${reset}"
+        echo "${gray}origin:${reset} ${cyan}${origin_short}${reset} ${gray}(${upstream})${reset}${ahead_str}${behind_str}"
+    fi
+
+    local head_full
+    head_full=$(git rev-parse HEAD 2>/dev/null)
+    for candidate in develop master main origin/develop origin/master origin/main; do
+        [[ "$candidate" == "$branch" || "$candidate" == "origin/$branch" ]] && continue
+        local merge_sha
+        merge_sha=$(git merge-base HEAD "$candidate" 2>/dev/null) || continue
+        [[ "$merge_sha" == "$head_full" ]] && continue
+        local base_short commit_count
+        base_short=$(git rev-parse --short=7 "$merge_sha")
+        commit_count=$(git rev-list --count "${merge_sha}..HEAD" 2>/dev/null)
+        echo "${gray}base:${reset}   ${green}${base_short}${reset} ${gray}(${candidate})${reset}  ${gray}${commit_count} commit(s) on this branch${reset}"
+        break
+    done
+
+    echo ""
+}
+
+gl() {
+    _gl_log_header
+    git log --color=always \
+        '--format=tformat:%C(yellow)%H%C(reset)%C(auto)%d%C(reset)%n%C(brightblack)%an <%ae>  %ad%C(reset)%n%n%C(249)%w(0,4,4)%B%C(reset)' \
+        '--date=format:%a %d/%m/%y %H:%M' \
+        "$@" | less -R
+}
+alias gitl='gl'
+
+gl2() {
+    local esc=$'\033'
+    local reset="${esc}[0m" gray="${esc}[90m" green="${esc}[32m" red="${esc}[31m"
+    _gl_log_header
+    local pending_sha="" buffer=()
+    while IFS= read -r line; do
+        # Detect a commit SHA line (may be preceded by ANSI escapes)
+        if echo "$line" | grep -qP '(?:\x1b\[\d+m)*[0-9a-f]{40}'; then
+            if [[ -n "$pending_sha" ]]; then
+                echo "$pending_sha"
+                printf '%s\n' "${buffer[@]}"
+                buffer=()
+            fi
+            pending_sha="$line"
+        elif [[ "$line" == ">>END<<" ]]; then
+            : # consumed
+        elif echo "$line" | grep -qP '^\s*\d+ files? changed'; then
+            local f i d
+            f=$(echo "$line" | grep -oP '^\s*\K\d+(?= file)')
+            i=$(echo "$line" | grep -oP '\d+(?= insertion)' || echo "0")
+            d=$(echo "$line" | grep -oP '\d+(?= deletion)'  || echo "0")
+            echo "${pending_sha}  ${gray}${f}f ${green}+${i}${reset} ${red}-${d}${reset}"
+            pending_sha=""
+            printf '%s\n' "${buffer[@]}"
+            buffer=()
+        else
+            if [[ -n "$pending_sha" ]]; then
+                buffer+=("$line")
+            else
+                echo "$line"
+            fi
+        fi
+    done < <(git log --color=always --shortstat \
+        '--format=tformat:%C(yellow)%H%C(reset)%C(auto)%d%C(reset)%n%C(brightblack)%an <%ae>  %ad%C(reset)%n%n%C(249)%w(0,4,4)%B%w(0,0,0)%C(reset)%n>>END<<' \
+        '--date=format:%a %d/%m/%y %H:%M' \
+        "$@")
+}
+alias gitl2='gl2'
+
+# Graph log — tree on the left, compact detail on the right
+alias gitlg="git log --graph --abbrev-commit --decorate --all --color=always \
+    '--format=format:%C(bold blue)%h%C(reset)  %C(bold green)%<(14)%ar%C(reset)  %C(cyan)%<(20,trunc)%an%C(reset)  %s%C(bold yellow)%d%C(reset)'"
+
+# Ultra-compact graph (hash + subject + refs only)
+alias gitlg2='git log --oneline --graph --decorate --all --color=always'
+
+# ---------------------------------------------------------------------------
+# Show
+# ---------------------------------------------------------------------------
 alias gs='git show'
+alias gits='git show'
+alias gitsn='git show --name-only'
+
+# ---------------------------------------------------------------------------
+# Stash
+# ---------------------------------------------------------------------------
+alias gp='git stash pop'
 alias gst='git stash push'
-alias gup='git reset HEAD~1'
-alias ignoreme='git update-index --assume-unchanged'
-alias pushdr='f() { git push -u origin "$(git rev-parse --abbrev-ref HEAD):$1"; }; f'
-alias rs='reset && git status'
-alias rebase='f() { branch=$(git reflog show --all | grep $1 | awk '\''/refs/'\'' | awk '\''NR==1{print $2}'\'' | sed -e "s/refs\/remotes\///" | sed "s/\@.*//"); git rebase $branch; }; f'
-alias remote!='branch=$(git rev-parse --abbrev-ref HEAD); git remote update; git reset --hard origin/$branch'
-alias rootb='branch=$(git reflog show --all | grep $1 | awk '\''/refs/'\'' | awk '\''NR==1{print $2}'\'' | sed -e "s/refs\/remotes\///" | sed "s/\@.*//")'
+alias gstl='git stash list'
 alias stash='git stash save'
 alias stashp='git stash pop'
-alias uncommit='git reset --soft HEAD^'
-alias update='git remote update && git rebase origin'
-alias updated='git remote update && git rebase origin/develop'
+
+# ---------------------------------------------------------------------------
+# Fetch / pull / cherry-pick / clean
+# ---------------------------------------------------------------------------
+alias gitf='git fetch'
+alias gitpl='git pull --rebase'
+alias gitcp='git cherry-pick'
+alias gclean='git clean -fd'
+
+# ---------------------------------------------------------------------------
+# Push
+# ---------------------------------------------------------------------------
+alias gpf='git push --force'
+alias gitfp='git push --force'
+alias gitpf='git push --force'
+
+gp1() {
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    git push --set-upstream origin "$branch"
+}
+
+pushdr() {
+    local remote="$1"
+    local local_branch
+    local_branch=$(git rev-parse --abbrev-ref HEAD)
+    git push -u origin "${local_branch}:${remote}"
+}
+
+# ---------------------------------------------------------------------------
+# Remote
+# ---------------------------------------------------------------------------
+alias gru='git remote update'
+alias grpo='git remote prune origin'
+alias giturl='git config --get remote.origin.url'
+alias grh='git reset --hard'
+
+# Hard-reset to remote HEAD using fetch + FETCH_HEAD (works without tracking ref)
+gitremote-reset() {
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    git fetch origin "$branch"
+    git reset --hard FETCH_HEAD
+}
+alias 'remote!'='gitremote-reset'
+
+# ---------------------------------------------------------------------------
+# Rebase helpers
+# ---------------------------------------------------------------------------
+alias grd='git rebase develop'
+alias grm='git rebase master'
+alias gitra='git rebase --abort'
+alias gitrc='git rebase --continue'
+alias groot='git rebase -i --root master'
+
+# Rebase onto origin of current branch using fetch+FETCH_HEAD
+gro() {
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    git fetch origin "$branch"
+    git rebase FETCH_HEAD "$@"
+}
+
+groi() {
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    git fetch origin "$branch"
+    git rebase -i FETCH_HEAD "$@"
+}
+
+grod() {
+    git fetch origin develop
+    git rebase FETCH_HEAD "$@"
+}
+
+# Fetch a named remote branch then rebase onto it
+grof() {
+    local remote="${1#origin/}"   # strip leading 'origin/' if present
+    git fetch origin "$remote"
+    git rebase FETCH_HEAD
+}
+
+# Interactive rebase — integer N rebases HEAD~N; SHA/branch rebases from that ref's parent
+gri() {
+    local target="${1:-1}"
+    if [[ "$target" =~ ^[0-9]+$ ]]; then
+        git rebase -i "HEAD~${target}"
+    else
+        git rebase -i "${target}^"
+    fi
+}
+
+grim() {
+    local target="${1:-1}"
+    if [[ "$target" =~ ^[0-9]+$ ]]; then
+        git rebase -i --rebase-merges "HEAD~${target}"
+    else
+        git rebase -i --rebase-merges "${target}^"
+    fi
+}
+
+# Rebase onto a branch found by partial name in the reflog
+rebaseon() {
+    local fragment="$1"
+    local branch
+    branch=$(git reflog show --all 2>/dev/null \
+        | grep "$fragment" \
+        | grep 'refs/' \
+        | awk 'NR==1{print $2}' \
+        | sed -e 's|refs/remotes/||' -e 's/@{.*//')
+    if [[ -n "$branch" ]]; then
+        git rebase "$branch"
+    else
+        echo "No branch matching '$fragment' found in reflog" >&2
+        return 1
+    fi
+}
+alias rebase='rebaseon'
+
+# ---------------------------------------------------------------------------
+# Reset / misc
+# ---------------------------------------------------------------------------
+alias gup='git reset HEAD~1'
+alias gitrmc='git rm --cached'
+alias ignoreme='git update-index --assume-unchanged'
+alias dontignoreme='git update-index --no-assume-unchanged'
+
+# Clear screen + status
+rs() { reset; git status; }
+
+# ---------------------------------------------------------------------------
+# Update shortcuts
+# ---------------------------------------------------------------------------
+update() {
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    git fetch origin "$branch"
+    git rebase FETCH_HEAD
+}
+
+updated() {
+    git fetch origin develop
+    git rebase FETCH_HEAD
+}
+
+# ---------------------------------------------------------------------------
+# Worktree helpers
+# ---------------------------------------------------------------------------
+
+# Returns the project root (bare or standard layout)
+_wt_project_root() {
+    local main
+    main=$(git worktree list --porcelain | grep '^worktree ' | head -1 | sed 's/^worktree //')
+    if [[ -d "$main/.git" ]]; then
+        echo "$main"
+    else
+        dirname "$main"
+    fi
+}
+
+# Returns all worktree paths
+_wt_paths() {
+    git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //'
+}
+
+# Navigate to a worktree by partial path name
+wt-go() {
+    local name="$1"
+    local match
+    match=$(_wt_paths | grep "$name" | head -1)
+    if [[ -n "$match" ]]; then
+        cd "$match"
+    else
+        echo "No worktree matching '$name'" >&2
+        return 1
+    fi
+}
+
+# List all worktrees
+wt-list() { git worktree list; }
+
+# Create a feature/ worktree + branch
+wt-feature() {
+    local ticket="$1" desc="$2" base="${3:-develop}"
+    local root wtpath
+    root=$(_wt_project_root)
+    wtpath="$root/feature/$ticket-$desc"
+    git worktree add "$wtpath" -b "feature/$ticket-$desc" "$base"
+}
+
+# Create a fix/ worktree + branch
+wt-fix() {
+    local ticket="$1" desc="$2" base="${3:-develop}"
+    local root wtpath
+    root=$(_wt_project_root)
+    wtpath="$root/fix/$ticket-$desc"
+    git worktree add "$wtpath" -b "fix/$ticket-$desc" "$base"
+}
+
+# Check out an existing branch into a new worktree, preserving path structure
+# e.g. wt-c feature/ABC-123-foo  →  <root>/feature/ABC-123-foo
+wt-c() {
+    local branch="$1"
+    local root wtpath
+    root=$(_wt_project_root)
+    wtpath="$root/$branch"
+    git worktree add "$wtpath" "$branch"
+}
+
+# Remove a worktree and safe-delete its local branch
+wt-done() {
+    local name="$1"
+    local match branch
+    match=$(_wt_paths | grep "$name" | head -1)
+    if [[ -z "$match" ]]; then echo "No worktree matching '$name'" >&2; return 1; fi
+    branch=$(git -C "$match" branch --show-current)
+    git worktree remove "$match"
+    [[ -n "$branch" ]] && git branch -d "$branch"
+}
+
+# Force-remove a worktree + hard-delete its branch (unmerged ok)
+wt-done-f() {
+    local name="$1"
+    local match branch
+    match=$(_wt_paths | grep "$name" | head -1)
+    if [[ -z "$match" ]]; then echo "No worktree matching '$name'" >&2; return 1; fi
+    branch=$(git -C "$match" branch --show-current)
+    git worktree remove --force "$match"
+    [[ -n "$branch" ]] && git branch -D "$branch"
+}
+
+# Show git status for every worktree
+_wt_status() {
+    _wt_paths | while IFS= read -r wt; do
+        echo ""
+        echo "=== $wt ==="
+        git -C "$wt" status --short
+    done
+}
+alias 'wt!'='_wt_status'
+
+# Prune stale worktree references
+wt-prune() { git worktree prune -v; }
+
+# Set up a multi-worktree workspace
+# Usage: wt-setup <branch,...> [repo-name] [clone-url] [parent-path]
+wt-setup() {
+    local branches_str="" name="" clone_url="" path="$(pwd)"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -b|-branches|--branches) shift; branches_str="$1" ;;
+            -n|-name|--name)         shift; name="$1" ;;
+            -u|-url|--url)           shift; clone_url="$1" ;;
+            -p|-path|--path)         shift; path="$1" ;;
+            *) echo "Unknown argument: $1" >&2; return 1 ;;
+        esac
+        shift
+    done
+
+    if [[ -z "$branches_str" ]]; then
+        echo "Usage: wt-setup -b <branch[,branch,...]> [-n name] [-u clone-url] [-p path]" >&2
+        return 1
+    fi
+
+    local -a branches
+    IFS=',' read -ra branches <<< "$branches_str"
+
+    local git_root workspace_dir
+    if [[ -n "$clone_url" ]]; then
+        local repo_name="${clone_url##*/}"; repo_name="${repo_name%.git}"
+        [[ -z "$name" ]] && name="$repo_name"
+        local clone_target="$path/$name/.git-main"
+        echo "Cloning $clone_url → $clone_target"
+        git clone --bare "$clone_url" "$clone_target"
+        git -C "$clone_target" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+        git -C "$clone_target" fetch --all --quiet
+        git_root="$clone_target"
+        workspace_dir="$path/$name"
+    else
+        git_root=$(git rev-parse --show-toplevel 2>/dev/null)
+        if [[ -z "$git_root" ]]; then
+            echo "Not inside a git repo. Use --url to clone one." >&2; return 1
+        fi
+        [[ -z "$name" ]] && name="$(basename "$git_root")"
+        workspace_dir="$(dirname "$git_root")/$name"
+        mkdir -p "$workspace_dir"
+    fi
+
+    echo "Workspace: $workspace_dir"
+    for branch in "${branches[@]}"; do
+        local safe_name="${branch//\//-}"
+        local wtpath="$workspace_dir/$safe_name"
+        if git -C "$git_root" rev-parse --verify "$branch" &>/dev/null; then
+            echo "  [$branch] existing local"
+            git -C "$git_root" worktree add "$wtpath" "$branch"
+        elif git -C "$git_root" rev-parse --verify "origin/$branch" &>/dev/null; then
+            echo "  [$branch] tracking remote"
+            git -C "$git_root" worktree add --track -b "$branch" "$wtpath" "origin/$branch"
+        else
+            echo "  [$branch] new branch"
+            git -C "$git_root" worktree add -b "$branch" "$wtpath"
+        fi
+    done
+}
+
+# ---------------------------------------------------------------------------
+# fix-fetch-refspecs — add missing fetch refspecs to all local repos
+# ---------------------------------------------------------------------------
+fix-fetch-refspecs() {
+    local root="${1:-$HOME/repos}"
+    for dir in "$root"/*/; do
+        [[ -d "$dir/.git" ]] || continue
+        local fetch
+        fetch=$(git -C "$dir" config --get-all remote.origin.fetch 2>/dev/null || true)
+        if [[ -z "$fetch" ]]; then
+            echo "Fixing: $(basename "$dir")"
+            git -C "$dir" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+            git -C "$dir" remote update
+        fi
+    done
+}
